@@ -17,7 +17,7 @@ df = read_excel("./Data.xlsx")
 #Selección de una muestra aleatoria
 N = nrow(df) #tamaño de la población
 n=3500 # tamaño de la muestra
-set.seed(00044949)
+set.seed(put_your_seed)
 registros = sample(1:N,n,replace = F)
 Muestra_raw = df[registros,]
 Muestra = na.omit(Muestra_raw)

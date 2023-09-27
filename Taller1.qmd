@@ -1,0 +1,245 @@
+---
+title: "Reporte"
+Author: "Keren A. Pájaro C"
+format: pdf
+echo: false
+---
+
+#### Se realizó una encuesta a 8612 hogares donde se les preguntó a cada uno cuántas personas viven en el lugar, el ingreso total, si clasifican basuras, si las personas del hogar se lavan las manos con jabon y dónde se encuentra ubicado el sanitario.
+
+```{r}
+library(readxl)
+df = read_excel("./Data.xlsx")
+#str(df)
+```
+
+```{r}
+#Selección de una muestra aleatoria
+N = nrow(df) #tamaño de la población
+n=3500 # tamaño de la muestra
+set.seed(00044949)
+registros = sample(1:N,n,replace = F)
+Muestra_raw = df[registros,]
+Muestra = na.omit(Muestra_raw)
+#print(Muestra)
+#summary(Muestra)
+```
+
+```{r}
+cuentaph_na = n-sum(!is.na(Muestra_raw$CANT_PERSONAS_HOGAR))
+cuentaih_na = n-sum(!is.na(Muestra_raw$I_HOGAR))
+cuentapercapita_na = n-sum(!is.na(Muestra_raw$PERCAPITA))
+cuentausojabon_na = n-sum(!is.na(Muestra_raw$`USUALMENTE USAN JABON`))
+cuentaclasifica_na = n-sum(!is.na(Muestra_raw$`CLASIFICAN BASURAS`))
+cuentasanitario_na = n-sum(!is.na(Muestra_raw$`SANITARIO UBICADO`))
+```
+
+El presente documento muestra el resultado obtenido al analizar una muestra de 3500 hogares donde no todos respondieron a las preguntas realizadas. De la muestra seleccionada hubo un total de `r cuentaph_na+cuentaih_na+cuentapercapita_na+cuentausojabon_na+cuentaclasifica_na+cuentasanitario_na` preguntas sin responder. A continuación un resumen del total de preguntas sin respuestas.[^1]
+
+[^1]: Las respuestas sin datos no fueron tenidas en cuenta en el desarrollo del análisis
+
+| Pregunta                         | Conteo "Sin respuesta" |
+|----------------------------------|------------------------|
+| Cantidad de personas en el hogar | `r cuentaph_na`        |
+| Ingresos del hogar               | `r cuentaih_na`        |
+| Ingresos por persona             | `r cuentapercapita_na` |
+| Uso de jabón                     | `r cuentausojabon_na`  |
+| Clasifica basuras                | `r cuentaclasifica_na` |
+| Tiene sanitario                  | `r cuentasanitario_na` |
+
+Al analizar los datos obtenidos del estudio es posible evidenciar un alto índice de sesgo al agrupar las diferentes respuestas a cada pregunta, por lo que es muy importante abordar con precaución la interpretación de los resultados mostrados.
+
+#### Análisis individual de variables
+
+El resumen de la *cantidad de personas que usualmente usa jabon* mostrado a continuación evidencia numérica y gráficamente una tendencia hacia un grupo, con unos comportamientos específicos, en el estudio.
+
+```{r}
+uso_jabon = factor(
+  Muestra$`USUALMENTE USAN JABON`,
+  levels = c(1, 2, 3),
+  labels = c("Si", "No", "No se lavan las manos")
+)
+tabla = table(uso_jabon)
+#tabla
+#barplot(tabla)
+
+```
+
+|                        |              |
+|------------------------|--------------|
+| `r rownames(tabla)[1]` | `r tabla[1]` |
+| `r rownames(tabla)[2]` | `r tabla[2]` |
+| `r rownames(tabla)[3]` | `r tabla[3]` |
+
+De manera gráfica también es posible observar la proporción de las respuestas obtenidas
+
+```{r}
+barplot(tabla)
+```
+
+Se asocia entonces la muestra a un grupo socioeconómico predefinido, probablemente con una sólida educación en términos de higiene y salubridad.
+
+```{r}
+# pie(tabla, labels = names(tabla))
+```
+
+Ahora bien, el análisis de una única variable cualitativa no es suficiente para obtener conclusiones generales del estudio.
+
+Al analizar las respuestas de la *cantidad de personas por hogar*
+
+```{r}
+tabla1=Muestra$CANT_PERSONAS_HOGAR
+hist_cant_pph = hist(tabla1, plot=FALSE)
+top_n = 3
+top_bins = order(hist_cant_pph$counts, decreasing = TRUE)[1:top_n]
+colors = ifelse(seq_along(hist_cant_pph$counts) %in% top_bins, c("#FF3333"), c("skyblue"))
+hist(tabla1, col = colors, main = "Cantidad de personas por hogar", xlab = "N° de personas por hogar", ylab = "N° de hogares" )
+```
+
+Se observa que el `r round((sum(hist_cant_pph$counts[top_bins])/length(Muestra$CANT_PERSONAS_HOGAR))*100,2)` % de los hogares encuestados está conformado a lo sumo por 4 integrantes.
+
+```{r}
+# plot(density(tabla1))
+```
+
+```{r}
+#Calculo MDC = media o promedio, M.D.L=Mediana, M.D.D=Moda, M.D.F=Media geométrica
+mdc1=mean(Muestra$CANT_PERSONAS_HOGAR)
+mdl1=median(Muestra$CANT_PERSONAS_HOGAR)
+
+Mode = function(x) {
+ux <- unique(x)
+ux[which.max(tabulate(match(x, ux)))]
+}
+
+mdd1= Mode(Muestra$CANT_PERSONAS_HOGAR)
+mdf1= exp(mean(log(Muestra$CANT_PERSONAS_HOGAR)))
+
+mdc2=mean(Muestra$I_HOGAR)
+mdl2=median(Muestra$I_HOGAR)
+mdd2=Mode(Muestra$I_HOGAR)
+mdf2= exp(mean(log(Muestra$I_HOGAR)))
+```
+
+Al calcular las medidas de tendencia central, se tiene que la media es de `r round(mdc1,2)`, la mediana es `r mdl1`, la moda es `r mdd1`, y la media geométrica es `r round(mdf1,2)` , lo cual indica que los datos se encuentran agrupados alrededor de `r mdd1` .
+
+Al visualizar el gráfico de densidad de personas por hogar se observa que no se sigue una distribución normal y se debe revisar a fondo la naturaleza de los diferentes picos de densidad para ajustar los datos y obtener resultados más fidedignos. Sin embargo, los datos sí presentan una distribución normal respecto a `r mdd1`, una vez más es indicio de sesgo o poca fiabilidad de los datos recopilados
+
+```{r}
+plot(density(tabla1), main = "Densidad N° de personas por hogar")
+curve(dnorm(x, mean = mean(tabla1), sd = sd(tabla1)), add = TRUE, col = "red")
+```
+
+Al analizar gráfica y numéricamente los *ingresos por hogar* se observa fuertemente la tendencia hacia un tipo de hogar en específico.
+
+```{r}
+min_valor = min(Muestra$I_HOGAR)
+max_valor = max(Muestra$I_HOGAR)
+intervalos = seq(min_valor, max_valor+3000000, by = 3000000)
+options(scipen = 999)
+hist(Muestra$I_HOGAR, breaks = intervalos, col = "skyblue", xlab = "Ingresos por hogar", ylab="N° de hogares", main = "Ingresos por hogar")
+```
+
+```{r}
+primer_intervalo=Muestra$I_HOGAR[Muestra$I_HOGAR<=min_valor+3000000]
+porcentaje_primer_intervalo = (length(primer_intervalo) / length(Muestra$I_HOGAR)) * 100
+porcentajes = c(porcentaje_primer_intervalo, 100 - porcentaje_primer_intervalo)
+etiquetas = c("Ingresos de 0 a 3MM", "Otros Ingresos")
+colores = c("skyblue", "lightgray")
+pie(porcentajes, labels = c(paste("Ingresos de 0 a 3MM\n", round(porcentaje_primer_intervalo, 2), "%"),
+               paste("Otros Ingresos\n", round(porcentajes[2], 2), "%")), col = colores, main = "Porcentaje de Ingresos")
+legend("topright", legend = etiquetas, fill = colores)
+```
+
+Con una media de `r round(mdc2/1000000,2)` MM, una mediana de `r round(mdl2/1000000,2)` MM, una moda de `r mdd2`, y una media geométrica de `r mdf2`, el `r round(porcentaje_primer_intervalo,2)` % de los hogares encuestados gana entre `r min_valor` y `r min_valor+3000000` . De tal manera que hasta este punto no queda duda que el estudio presenta alto índice de sesgo respecto al tipo de hogar encuestado.
+
+#### Análisis por relación de variables
+
+Al analizar dos o más variables en conjunto y su relación, si existe, los resultados refuerzan o reestructuran la tesis de una **tendencia marcada hacia un segmento en particular** pre definido.
+
+La siguiente gráfica confirma que la relación entre la *cantidad de personas por hogar* y los *ingresos por hogar* es muy débil. Por la concentración de los datos se infiere que independientemente de la cantidad de personas, existe un límite de ingresos por hogar muy marcado (lo cual también es evidenciado en el gráfico circular mostrado anteriormente).
+
+```{r}
+#Relating Cantidad de personas e ingresos
+plot(Muestra$CANT_PERSONAS_HOGAR, Muestra$I_HOGAR, main="Cantidad de personas vs ingresos por hogar", xlab = "N° de personas por hogar", ylab = "Ingresos por hogar")
+```
+
+```{r}
+ingresos_menor_que_el_promedio=length(Muestra$I_HOGAR[Muestra$I_HOGAR<=mdc2])
+ingresos_menor_que_el_promedio = (ingresos_menor_que_el_promedio/ length(Muestra$I_HOGAR))*100
+```
+
+De hecho, el `r round(ingresos_menor_que_el_promedio,2)`% de los hogares encuestados ganan máximo `r round(mdc2/1000000,2)`millones.
+
+Al examinar en conjunto la posible relación entre las respuestas por hogar obtenidas en términos de higiene, salubridad y cuidado ambiental es más clara la dirección de la tendencia y la descripción del segmento es más precisa.
+
+A continuación, el resumen en cuanto al uso de jabon y la relación (gráfica) entre el número de personas por hogar y el número de personas que no se lava las manos.
+
+```{r}
+proporcion_hogares_que_usan_jabon= 
+  (length(Muestra$`USUALMENTE USAN JABON`[Muestra$`USUALMENTE USAN JABON`==1])/length(Muestra$`USUALMENTE USAN JABON`))*100
+proporcion_hogares_que_nousan_jabon=(length(Muestra$`USUALMENTE USAN JABON`[Muestra$`USUALMENTE USAN JABON`==2])/length(Muestra$`USUALMENTE USAN JABON`))*100
+porcentajes_hogares_usan_jabon = c(proporcion_hogares_que_usan_jabon, proporcion_hogares_que_nousan_jabon,100 - (proporcion_hogares_que_usan_jabon+proporcion_hogares_que_nousan_jabon))
+etiquetas = c("Usan jabón", "No usan jabón", "No se lavan las manos")
+colores = c("skyblue", "#FF3333", "lightgray")
+pie(porcentajes_hogares_usan_jabon, labels = c(paste(round(proporcion_hogares_que_usan_jabon, 2), "%"),
+               paste(round(porcentajes_hogares_usan_jabon[2], 2), "%"),paste(round(porcentajes_hogares_usan_jabon[3],2),"%")), col = colores, main = "Porcentaje de hogares que usan jabon")
+legend("bottomleft", legend = etiquetas, fill = colores)
+```
+
+Distinción por número de personas por hogar que no se lava las manos.
+
+```{r}
+promedio_personnas_no_lavan=mean(Muestra$CANT_PERSONAS_HOGAR[Muestra$`USUALMENTE USAN JABON`==3])
+```
+
+```{r}
+hist(Muestra$`CANT_PERSONAS_HOGAR`[Muestra$`USUALMENTE USAN JABON`==3], main = "N° de  personas por hogar que no se lavan las manos", xlab = "N° de personas", ylab= "N° de hogares")
+```
+
+El promedio de personas por hogar que no se lava las manos es `r round(promedio_personnas_no_lavan,2)`
+
+```{r}
+proporcion_hogares_que_clasifican = (length(Muestra$`CLASIFICAN BASURAS`[Muestra$`CLASIFICAN BASURAS`==1])/length(Muestra$`CLASIFICAN BASURAS`))*100
+```
+
+La proporción de hogares que clasifica basuras es `r round(proporcion_hogares_que_clasifican,2)` %. A continuación la gráfica que ilustra la proporción.
+
+```{r}
+porcentajes2 = c(proporcion_hogares_que_clasifican, 100 - proporcion_hogares_que_clasifican)
+colores = c("skyblue","lightgray")
+pie(porcentajes2, labels = c(paste("Clasifican basuras\n", round(proporcion_hogares_que_clasifican, 2), "%"),
+               paste("No clasifican\n", round(porcentajes2[2], 2), "%")), col = colores, main = "Porcentaje de hogares que clasifican basuras")
+legend("topleft", legend = etiquetas, fill = colores)
+```
+
+```{r}
+#¿Qué diferencia existen entre la proporción de hogares que clasifican las basuras con la proporción de los hogares que usan jabón para lavarse las manos?
+
+#¿Qué diferencia existen entre la media de los ingresos de hogares que cuentan con servicio sanitario
+#ubicado dentro de la vivienda y la media de los ingresos de hogares que cuentan con servicio sanitario
+#ubicado fuera de la vivienda, pero en el lote o terreno?
+
+```
+
+La diferencia entre la proporción de hogares que clasifica basuras con la proporción de hogares que usan jabón para lavarse las manos es `r round(abs(proporcion_hogares_que_clasifican-proporcion_hogares_que_usan_jabon),2)` %.
+
+Finalmente, la distinción por ubicación del sanitario.
+
+```{r}
+media_sanitario__dentro=mean(Muestra$I_HOGAR[Muestra$`SANITARIO UBICADO`==1])
+media_sanitario_afuera=mean(Muestra$I_HOGAR[Muestra$`SANITARIO UBICADO`==2])
+dif=media_sanitario__dentro-media_sanitario_afuera
+```
+
+```{r}
+barplot(table(Muestra$`SANITARIO UBICADO`),col = c("red","skyblue"), legend.text=c("Sanitario adentro","Sanitario afuera"), main = "Gráfico de ubicación del sanitario por hogar", ylab = "N° de hogares", xlab = "Ubicación del sanitario")
+```
+
+#### Validez, utilidad, fiabilidad,  y calidad del estudio
+
+Es claro que a partir de la muestra las características generales del segmento principal son: hogares con no más de 4 integrantes con ingresos de aproximadamente 3000000, con conciencia y educación en materia del cuidado e higiene y con las medidas mínimas de salubridad en el hogar. Pero en términos de conciencia o educación ambiental es indiferente la categoría del grupo.
+
+Dado el sesgo, que es evidente, se podría afirmar que el estudio necesita ser corregido ya que amenaza su validez y compromete la fiabilidad y calidad del mismo. Sin embargo, La utilidad, calidad, fiaiblidad y validez del estudio no pueden ser determinadas únicamente a partir del análisis presentado, ya que se requiere información adicional sobre el campo de aplicación y los objetivos que el estudio busca alcanzar para determinarlas. No es lo mismo sesgo en materia de noticias o periodismo que en modelos de negocios basados en ventas de productos o prestación de servicios. Perfilar correctamente los clientes potenciales cobra relevancia en el ámbito comercial y de marketing pero podría costarle la reputación a un periódico que muestre opiniones sesgadas en materias de seguridad o economía.[^2]
+
+[^2]: Si se requiere replicar el análisis el código se encuentra en https://github.com/Keren10110/r-report
